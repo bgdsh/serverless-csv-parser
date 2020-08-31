@@ -1,0 +1,1 @@
+export const BYTES_1_MB = 1024 * 1024;

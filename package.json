@@ -1,0 +1,38 @@
+{
+  "name": "mycsvparser",
+  "version": "1.0.0",
+  "description": "Serverless webpack example using Typescript",
+  "main": "handler.js",
+  "scripts": {
+    "sls-deploy": "serverless deploy",
+    "sls-remove": "serverless remove",
+    "invoke": "serverless invoke -f parser -l",
+    "logs": "serverless logs -f parser -t",
+    "test": "jest"
+  },
+  "dependencies": {
+    "csv-parser": "^2.3.3",
+    "dynamodb-geo": "^0.4.0",
+    "s3-download-stream": "^1.1.1",
+    "source-map-support": "^0.5.10"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.17",
+    "@types/jest": "^26.0.10",
+    "@types/node": "^10.12.18",
+    "@types/s3-download-stream": "^0.1.0",
+    "@types/serverless": "^1.72.5",
+    "aws-sdk": "^2.742.0",
+    "fork-ts-checker-webpack-plugin": "^3.0.1",
+    "jest": "^26.4.2",
+    "serverless-webpack": "^5.2.0",
+    "ts-jest": "^26.3.0",
+    "ts-loader": "^5.3.3",
+    "ts-node": "^8.10.2",
+    "typescript": "^3.2.4",
+    "webpack": "^4.29.0",
+    "webpack-node-externals": "^1.7.2"
+  },
+  "author": "The serverless webpack authors (https://github.com/elastic-coders/serverless-webpack)",
+  "license": "MIT"
+}
