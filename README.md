@@ -5,7 +5,7 @@
 - Lambda function can be triggered by either restful API or `s3:ObjectCreated:Put` event.
 - Read and parse data from S3 in stream mode.
 - Save data to DB, coordinates as the key.
-- `serverless` config file describes the deployment.
+- `serverless` config file describes the infrastructure as code.
 - A SNS topic will be published when an error occur.
 - Unit test and e2e test code.
 
