@@ -6,42 +6,42 @@ import * as downloader from 's3-download-stream';
 import * as csvParser from 'csv-parser';
 import { ObjectToStringTransform } from './obj-to-string-transform';
 
-const s3 = new AWS.S3();
-
 export class S3CsvParser {
-    public static readonly maxContentLength = getIntEnvValue('', BYTES_1_MB * 10);
-    public static readonly headerLine = process.env.CSV_HEADER_LINE || 'latitude,longitude,address';
-    public static readonly bucket = process.env.S3_BUCKET;
+    public readonly maxContentLength = getIntEnvValue('MAX_CONTENT_LENGTH', BYTES_1_MB * 10);
+    public readonly headerLine = process.env.CSV_HEADER_LINE || 'latitude,longitude,address';
+    public readonly bucket = process.env.S3_BUCKET;
+    public s3: AWS.S3;
+    constructor(s3?: AWS.S3) {
+        this.s3 = s3 || new AWS.S3();
+    }
+
     /**
      * Check if the specific S3 key is a valid CSV file
      * @param key s3 key
      */
-    public static async validate(key: string) {
+    public async validate(key: string) {
         let headRes: PromiseResult<AWS.S3.HeadObjectOutput, AWS.AWSError>;
         try {
-            headRes = await s3.headObject({
+            headRes = await this.s3.headObject({
                 Bucket: process.env.S3_BUCKET,
                 Key: key,
             }).promise();
         } catch (error) {
             return false;
         }
-        // FIXME: catch the errors
-        const headRespone = (headRes.$response.data as AWS.S3.HeadObjectOutput);
+        const headRespone = headRes.$response ? (headRes.$response.data as AWS.S3.HeadObjectOutput) : headRes;
         const contentType = headRespone.ContentType;
-        if (contentType !== 'text/csv') {
-            console.log('file content type is not valid');
+        if (contentType && contentType !== 'text/csv') {
             return false;
         }
         const fileSize = headRespone.ContentLength;
         if (fileSize > this.maxContentLength) {
-            console.log('file size is not valid');
             return false;
         }
 
         let headContentRes: PromiseResult<AWS.S3.GetObjectOutput, AWS.AWSError>
         try {
-            headContentRes = await s3.getObject({
+            headContentRes = await this.s3.getObject({
                 Bucket: this.bucket,
                 Range: `bytes=0-${this.headerLine.length}`,
                 Key: key,
@@ -49,18 +49,17 @@ export class S3CsvParser {
         } catch (error) {
             return false;
         }
-        const headContentResponse = headContentRes.$response.data as AWS.S3.GetObjectOutput;
+        const headContentResponse = headContentRes.$response ? (headContentRes.$response.data as AWS.S3.GetObjectOutput) : headContentRes;
         const headerLine = headContentResponse.Body.toString()
         if (!headerLine.startsWith(this.headerLine)) {
-            console.log('file headline is not valid: %j', { headerLine, expected: this.headerLine });
             return false;
         }
         return true;
     }
 
-    static getDownloadStream(key: string) {
+    getParsedStream(key: string) {
         return downloader({
-            client: s3,
+            client: this.s3,
             params: {
                 Key: key,
                 Bucket: this.bucket,

@@ -8,17 +8,16 @@ export class DynamoDBWriter extends Writable {
   ddbGeoConfig: ddbGeo.GeoDataManagerConfiguration;
   ddb: AWS.DynamoDB;
 
-  constructor() {
+  constructor(options?: AWS.DynamoDB.ClientConfiguration) {
     super();
-    this.ddb = new AWS.DynamoDB();
+    this.ddb = new AWS.DynamoDB(options);
     this.ddbGeoConfig = new ddbGeo.GeoDataManagerConfiguration(this.ddb, process.env.TABLE_NAME);
     this.ddbGeoConfig.hashKeyLength = 12;
     this.ddbGeoManager = new ddbGeo.GeoDataManager(this.ddbGeoConfig);
   }
 
-  _write(row: string, encoding: string, next: (error?: Error | null) => void) {
+  _write(row: string, _: string, next: (error?: Error | null) => void) {
     (async () => {
-      console.log('prepare to write row %s to db, ecoding is: %s', row, encoding)
       const parsed: { latitude: string, longitude: string, address: string } = JSON.parse(row);
       const putPointInput = {
         RangeKeyValue: { S: '5432' },
@@ -32,7 +31,6 @@ export class DynamoDBWriter extends Writable {
           }
         }
       };
-      console.log('put point input: %j', putPointInput);
       await this.ddbGeoManager.putPoint(putPointInput).promise();
       next();
     })();

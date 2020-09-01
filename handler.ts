@@ -1,54 +1,44 @@
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import 'source-map-support/register';
-import { LambdaEventParser } from './lib/lambda-event-parser';
-import { S3CsvParser } from './lib/s3-csv-parser';
-import { DynamoDBWriter } from './lib/ddb-writer';
+import { LambdaEventParser } from './common/lambda-event-parser';
+import { S3CsvParser } from './common/s3-csv-parser';
+import { DynamoDBWriter } from './common/ddb-writer';
+import { SNSErrorReporter } from './common/error-reporter';
+import { buildResponse } from './common/helpers';
 
 export const parser: APIGatewayProxyHandler = async (event, _context) => {
+  const errorReportor = new SNSErrorReporter();
   const key = LambdaEventParser.getS3Key(event);
-  console.log('bucket: %s, key: %s', process.env.S3_BUCKET, key);
-  const valid = await S3CsvParser.validate(key);
+  const parser = new S3CsvParser();
+  const valid = await parser.validate(key);
   if (!valid) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({
-        success: false,
-        error: {
-          code: 'INVALID_FILE',
-          message: 'invalid csv file',
-        }
-      }),
-    };
+    errorReportor.publish(`invalid data file: ${key}`)
+    return buildResponse(200, {
+      error: {
+        code: 'INVALID_FILE',
+        message: 'invalid csv file',
+      }
+    })
   }
-  console.log('file %s is valid', key);
   try {
     await new Promise((resolve, reject) => {
       const dbWritter = new DynamoDBWriter();
-      S3CsvParser
-        .getDownloadStream(key)
+      parser
+        .getParsedStream(key)
         .pipe(dbWritter)
         .on('finish', () => {
           resolve();
         })
         .on('error', (error) => {
-          console.error('stream error', error);
+          const errorMsg = `data transformation error, ${JSON.stringify(error)}`
+          console.error(errorMsg);
+          errorReportor.publish(errorMsg);
           reject(error);
         });
     });
-    console.log('done, going to return success')
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        success: true,
-      }),
-    };
+    return buildResponse(200);
   } catch (error) {
     console.error('error: %j', error)
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        success: false,
-      }),
-    };
+    return buildResponse(500);
   }
 }

@@ -8,3 +8,13 @@ export const getIntEnvValue = (envName: string, defaultValue?: number): number =
     }
     return defaultValue;
 }
+
+export const buildResponse = (status: 200 | 400 | 500, extra: any = {}) => {
+    return {
+        statusCode: status,
+        body: JSON.stringify({
+          success: status === 200,
+          ... extra
+        }),
+      };
+} 
